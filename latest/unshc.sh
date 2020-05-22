@@ -43,19 +43,19 @@
 ###################
 VERSION="0.8"
 
-OBJDUMP=`which objdump`
-GREP=`which grep`
-CUT=`which cut`
-SHRED=`which shred`
-UNIQ=`which uniq`
-SORT=`which sort`
-GCC=`which gcc`
-WC=`which wc`
-AWK=`which awk`
-SED=`which sed`
-TR=`which tr`
-HEAD=`which head`
-TAIL=`which tail`
+OBJDUMP=$(which objdump)
+GREP=$(which grep)
+CUT=$(which cut)
+SHRED=$(which shred)
+UNIQ=$(which uniq)
+SORT=$(which sort)
+GCC=$(which gcc)
+WC=$(which wc)
+AWK=$(which awk)
+SED=$(which sed)
+TR=$(which tr)
+HEAD=$(which head)
+TAIL=$(which tail)
 
 BINARY=""
 TMPBINARY=$(mktemp /tmp/XXXXXX)
@@ -89,7 +89,7 @@ function usage(){
 
 # Clean all temp file created for this script
 function clean(){
-        $SHRED -zu -n 1 $DUMPFILE $CALLFILE $CALLADDRFILE $CALLSIZEFILE $STRINGFILE $TMPBINARY ${TMPBINARY}.c >/dev/null 2>&1
+        $SHRED -zu -n 1 "$DUMPFILE" "$CALLFILE" "$CALLADDRFILE" "$CALLSIZEFILE" "$STRINGFILE" "$TMPBINARY" "${TMPBINARY}".c >/dev/null 2>&1
 }
 
 # Clean error exit function after cleaning temp file
@@ -100,35 +100,35 @@ function exit_error(){
 
 # Check the availability of basic commands usefull for this script
 function check_binaries() {
-        if [ ! -x ${OBJDUMP} ]; then
+        if [ ! -x "${OBJDUMP}" ]; then
                 echo "[-] Error, cannot execute or find objdump binary"
                 exit_error
         fi
-        if [ ! -x ${GREP} ]; then
+        if [ ! -x "${GREP}" ]; then
                 echo "[-] Error, cannot execute or find grep binary"
                 exit_error
         fi
-        if [ ! -x ${CUT} ]; then
+        if [ ! -x "${CUT}" ]; then
                 echo "[-] Error, cannot execute or find cut binary"
                 exit_error
         fi
-        if [ ! -x ${SHRED} ]; then
+        if [ ! -x "${SHRED}" ]; then
                 echo "[-] Error, cannot execute or find shred binary"
                 exit_error
         fi
-        if [ ! -x ${UNIQ} ]; then
+        if [ ! -x "${UNIQ}" ]; then
                 echo "[-] Error, cannot execute or find uniq binary"
                 exit_error
         fi
-        if [ ! -x ${SORT} ]; then
+        if [ ! -x "${SORT}" ]; then
                 echo "[-] Error, cannot execute or find sort binary"
                 exit_error
         fi
-        if [ ! -x ${GCC} ]; then
+        if [ ! -x "${GCC}" ]; then
                 echo "[-] Error, cannot execute or find gcc binary"
                 exit_error
         fi
-        if [ ! -x ${WC} ]; then
+        if [ ! -x "${WC}" ]; then
                 echo "[-] Error, cannot execute or find wc binary"
                 exit_error
         fi
@@ -137,9 +137,9 @@ function check_binaries() {
 # Create dump files of encrypted script
 function generate_dump() {
         # DUMPFILE dump to retrive arc4 address, address and size of each arc4 arguments and pwd
-        $OBJDUMP -D $BINARY > "$DUMPFILE"
+        $OBJDUMP -D "$BINARY" > "$DUMPFILE"
         # STRINGFILE dump to retrieve pwd and arc4 argument
-        $OBJDUMP -s $BINARY > "$STRINGFILE"
+        $OBJDUMP -s "$BINARY" > "$STRINGFILE"
 }
 
 # Find out the most called function. This function is arc4() and there are 14 calls.
@@ -148,9 +148,9 @@ function generate_dump() {
 # Update 28/07/2016 : Adding multiple ARC4 offsets support (loop on each candidate)
 function extract_arc4_call_addr(){
 	TAILNUMBER=$1
-	CALLADDRS=$($GREP -Eo "call.*[0-9a-f]{6,}" $DUMPFILE | $GREP -Eo "[0-9a-f]{6,}" | $SORT | $UNIQ -c | $SORT | $GREP -Eo "(14).*[0-9a-f]{6,}" | $GREP -Eo "[0-9a-f]{6,}")
-	TAILMAX=`wc -l <<< "$CALLADDRS"`
-        CALLADDR=$(echo $CALLADDRS | $SED "s/ /\n/g" | $TAIL -n $TAILNUMBER | $HEAD -n 1)
+	CALLADDRS=$($GREP -Eo "call.*[0-9a-f]{6,}" "$DUMPFILE" | $GREP -Eo "[0-9a-f]{6,}" | $SORT | $UNIQ -c | $SORT | $GREP -Eo "(14).*[0-9a-f]{6,}" | $GREP -Eo "[0-9a-f]{6,}")
+	TAILMAX=$(wc -l <<< "$CALLADDRS")
+        CALLADDR=$(echo "$CALLADDRS" | $SED "s/ /\n/g" | $TAIL -n "$TAILNUMBER" | $HEAD -n 1)
         if [[ -z "$CALLADDR" || $TAILNUMBER -gt $TAILMAX ]]; then
            echo "[-] Unable to define arc4() call address..."
            exit_error
@@ -164,8 +164,8 @@ function extract_variables_from_binary(){
         # Initialize the number of line before CALLADDR to looking for addresses of args
         i=2
         # Retrieve ordered list of address var and put it to $CALLADDRFILE
-        while [[ $($WC -l < $CALLADDRFILE) -ne 14 ]]; do
-                $GREP -B $i "call.*$CALLADDR" $DUMPFILE | $GREP -v "$CALLADDR" | $GREP -Eo "(0x[0-9a-f]{6,})" > $CALLADDRFILE
+        while [[ $($WC -l < "$CALLADDRFILE") -ne 14 ]]; do
+                $GREP -B $i "call.*$CALLADDR" "$DUMPFILE" | $GREP -v "$CALLADDR" | $GREP -Eo "(0x[0-9a-f]{6,})" > "$CALLADDRFILE"
                 i=$(($i + 1))
                 if [ $i -eq 10 ]; then
                         echo "[-] Unable to extract addresses of 14 arc4 args with ARC4 address call [0x$CALLADDR]..."
@@ -176,8 +176,8 @@ function extract_variables_from_binary(){
         # Initialize the number of line before CALLADDR to looking for sizes of args
         i=3
         # Retrieve ordered list of size var and append it to $CALLSIZEFILE
-        while [[ $($WC -l < $CALLSIZEFILE) -ne 14 ]]; do
-                $GREP -B $i "call.*$CALLADDR" $DUMPFILE | $GREP -v "$CALLADDR" | $GREP -Eo "(0x[0-9a-f]+,)" | $GREP -Eo "(0x[0-9a-f]+)" | $GREP -Ev "0x[0-9a-f]{6,}" > $CALLSIZEFILE
+        while [[ $($WC -l < "$CALLSIZEFILE") -ne 14 ]]; do
+                $GREP -B $i "call.*$CALLADDR" "$DUMPFILE" | $GREP -v "$CALLADDR" | $GREP -Eo "(0x[0-9a-f]+,)" | $GREP -Eo "(0x[0-9a-f]+)" | $GREP -Ev "0x[0-9a-f]{6,}" > "$CALLSIZEFILE"
                 i=$(($i + 1))
                 if [ $i -eq 10 ]; then
                         echo "[-] Unable to extract sizes of 14 arc4 args with ARC4 address call [0x$CALLADDR]..."
@@ -186,8 +186,8 @@ function extract_variables_from_binary(){
         done
 
         # For each full address in $CALLADDRFILE and corresponding size in $CALLSIZEFILE
-        IFS=$'\n' read -d '' -r -a LISTOFADDR < $CALLADDRFILE
-        IFS=$'\n' read -d '' -r -a LISTOFSIZE < $CALLSIZEFILE
+        IFS=$'\n' read -d '' -r -a LISTOFADDR < "$CALLADDRFILE"
+        IFS=$'\n' read -d '' -r -a LISTOFSIZE < "$CALLSIZEFILE"
         for (( x = 0; x < ${#LISTOFADDR[*]}; x = x+1 ))
         do
                 i=${LISTOFADDR[$x]}
@@ -225,7 +225,7 @@ function extract_variables_from_binary(){
         #
 
         # Key is the address with the variable content.
-        KEY=$(echo $i | $CUT -d 'x' -f 2)
+        KEY=$(echo "$i" | $CUT -d 'x' -f 2)
 
         # A 2 bytes variable (NBYTES > 0) can be found like this: (in STRINGFILE)
         # ---------------X
@@ -238,7 +238,7 @@ function extract_variables_from_binary(){
         let LASTBYTE="0x${KEY:$((${#KEY}-1))}"
 
         # Grep all lines needed from STRINGFILE, merge lines.
-        STRING=$( $GREP -A $(($NLINES-1)) -E "^ ${KEY:0:$((${#KEY}-1))}0 " $STRINGFILE | $AWK '{ print $2$3$4$5}' | $TR '\n' 'T' | $SED -e "s:T::g")
+        STRING=$( $GREP -A $(($NLINES-1)) -E "^ ${KEY:0:$((${#KEY}-1))}0 " "$STRINGFILE" | $AWK '{ print $2$3$4$5}' | $TR '\n' 'T' | $SED -e "s:T::g")
 
         # Change string to begin in the line index.
         STRING=${STRING:$((2*$LASTBYTE))}
@@ -306,11 +306,11 @@ function extract_password_from_binary(){
         # Initialize the number of line before CALLADDR to watch
         i=5
         while [[ ( -z "$KEY_ADDR" ) || ( -z "$KEY_SIZE" ) ]]; do
-                $GREP -B $i -m 1 "call.*$CALLADDR" $DUMPFILE | $GREP -v $CALLADDR > $CALLFILE
+                $GREP -B $i -m 1 "call.*$CALLADDR" "$DUMPFILE" | $GREP -v "$CALLADDR" > "$CALLFILE"
                 #cat $CALLFILE
                 # Adjust these two next line to grep right addr & size value (depending on your architecture)
-                KEY_ADDR=$($GREP -B 3 -m 1 "call" $CALLFILE | $GREP mov | $GREP -oE "0x[0-9a-z]{6,}+" | $HEAD -n 1)
-                KEY_SIZE=$($GREP -B 3 -m 1 "call" $CALLFILE | $GREP mov | $GREP -v $KEY_ADDR | $GREP -v movb | $GREP -oE "0x[0-9a-z]+" | $HEAD -n 1)
+                KEY_ADDR=$($GREP -B 3 -m 1 "call" "$CALLFILE" | $GREP mov | $GREP -oE "0x[0-9a-z]{6,}+" | $HEAD -n 1)
+                KEY_SIZE=$($GREP -B 3 -m 1 "call" "$CALLFILE" | $GREP mov | $GREP -v "$KEY_ADDR" | $GREP -v movb | $GREP -oE "0x[0-9a-z]+" | $HEAD -n 1)
                 i=$(($i + 1))
                 if [ $i -eq 10 ]; then
                         echo "[-] Error, function call previous first call of arc4() hasn't been identified..."
@@ -321,13 +321,13 @@ function extract_password_from_binary(){
         echo -e "\t[+] PWD size found : [$KEY_SIZE]"
 
         # Defining the address without 0x.
-        KEY=$(echo $KEY_ADDR | $CUT -d 'x' -f 2)
+        KEY=$(echo "$KEY_ADDR" | $CUT -d 'x' -f 2)
         # Like the other NLINES
         NLINES=$(( ($KEY_SIZE / 16) +2 ))
         # Like the other LASTBYTE
         LASTBYTE="0x${KEY:$((${#KEY}-1))}"
         # Extract PWD from STRINGFILE
-        STRING=$( $GREP -A $(($NLINES-1)) -E "^ ${KEY:0:$((${#KEY}-1))}0 " $STRINGFILE | $AWK '{ print $2$3$4$5}' | $TR '\n' 'T' | $SED -e "s:T::g")
+        STRING=$( $GREP -A $(($NLINES-1)) -E "^ ${KEY:0:$((${#KEY}-1))}0 " "$STRINGFILE" | $AWK '{ print $2$3$4$5}' | $TR '\n' 'T' | $SED -e "s:T::g")
         STRING=${STRING:$((2*$LASTBYTE))}
         STRING=${STRING:0:$(($KEY_SIZE * 2))}
         # Encode / rewrite PWD in the \x??\x?? format
@@ -341,7 +341,7 @@ function extract_password_from_binary(){
 # This function append a generic engine for decrypt from shc project. With out own new variables extracted.
 # Rather than execute the source code decrypted, it's printed in stdout.
 function generic_file(){
-cat > ${TMPBINARY}.c << EOF
+cat > "${TMPBINARY}".c << EOF
 #define msg1_z $VAR_MSG1_Z
 #define date_z $VAR_DATE_Z
 #define shll_z $VAR_SHLL_Z
@@ -658,14 +658,14 @@ while [ "$#" -gt 0 ] ; do
         esac
 done
 
-if [ ! -e $BINARY ]; then
+if [ ! -e "$BINARY" ]; then
         echo "[-] Error, File [$BINARY] not found."
         exit_error
 fi
 if [ -z "$DUMPFILE" ]; then
          DUMPFILE=$(mktemp /tmp/XXXXXX)
 else
-        if [ ! -e $DUMPFILE ]; then
+        if [ ! -e "$DUMPFILE" ]; then
                 echo "[-] Object dump file [$DUMPFILE] not found."
                 exit_error;
         fi
@@ -673,7 +673,7 @@ fi
 if [ -z "$STRINGFILE" ]; then
          STRINGFILE=$(mktemp /tmp/XXXXXX)
 else
-        if [ ! -e $STRINGFILE ]; then
+        if [ ! -e "$STRINGFILE" ]; then
                 echo "[-] String dump file [$STRINGFILE] not found."
                 exit_error;
         fi
@@ -687,7 +687,7 @@ generate_dump
 c=1
 if [ -z "$CALLADDR" ]; then
 	# Case when ARC4 offset is unknown and there are multiple candidate
-        while [[ $($WC -l < $CALLSIZEFILE) -ne 14 ]]; do
+        while [[ $($WC -l < "$CALLSIZEFILE") -ne 14 ]]; do
 		extract_arc4_call_addr "$c"
                 extract_variables_from_binary
 		c=$(($c + 1))
@@ -704,17 +704,17 @@ extract_password_from_binary
 generic_file
 
 # Compile C source code to decrypt *.sh.x file
-$GCC -o $TMPBINARY ${TMPBINARY}.c >/dev/null 2>&1
+$GCC -o "$TMPBINARY" "${TMPBINARY}".c >/dev/null 2>&1
 
 echo "[*] Executing [$TMPBINARY] to decrypt [${BINARY}]"
 
-chmod +x $TMPBINARY
+chmod +x "$TMPBINARY"
 if [ -z "$OUTPUTFILE" ]; then
         echo "[*] Retrieving initial source code in [${BINARY%.sh.x}.sh]"
-        $TMPBINARY > ${BINARY%.sh.x}.sh
+        $TMPBINARY > "${BINARY%.sh.x}".sh
 else
         echo "[*] Retrieving initial source code in [$OUTPUTFILE]"
-        $TMPBINARY > $OUTPUTFILE
+        $TMPBINARY > "$OUTPUTFILE"
 fi
 
 echo "[*] All done!"
